@@ -122,7 +122,7 @@ DeepSeek
 
 ### Задача
 
-TODO
+Научиться организовывать разработку проекта с использованием системы контроля версий Git.
 
 
 ### Модель
@@ -191,7 +191,7 @@ TZ.md
 
 ### Почему такой промпт
 
-Объедини первые два пункта задачи. Всё описание уже есть в TZ.md.
+Объединил первые два пункта задачи. Всё описание уже есть в TZ.md.
 
 
 ### Почему такая модель
@@ -211,12 +211,12 @@ TZ.md
 
 ### Собственная доработка
 
-TODO
+Другие команды (например, `git branch <branch>` вместо `git switch <branch>`), попробовал слияние без fast-forward.
 
 
 ### Вывод
 
-TODO
+Нейросеть подробно описала принципы работы с Git. Лично для себя выделил `git switch`.
 
 
 ---
@@ -267,3 +267,100 @@ DeepSeek часто ссылался на отсутствие элементо�
 ### Вывод
 
 Несмотря на недочёты, сочетание нейросетей DeepSeek и Figma позволяет в кратчайшие сроки и без глубокого погружения в детали UX/UI сгенерировать качественный макет, который после уточнений можно использовать для системы.
+
+
+---
+
+
+## Лабораторная работа №5
+
+### Задача
+
+Научиться переходить от модели предметной области к реляционной базе данных и SQL-запросам.
+
+
+### Модель
+
+DeepSeek
+
+
+### Промпт
+
+```
+Дана ServiceDesk система со следующими сущностями: пользователи, заявки, комментарии к заявкам, категории заявок, статусы заявок, роли, вложения.
+
+Предложи ER-модель с таблицами, ключами и ограничениями. Подготовь черновой schema.sql и набор тестовых данных. Предложи сложные SQL-запросы для поиска и JOIN.
+
+Используемая база данных: SQLite.
+```
+
+
+### Почему такой промпт
+
+Решил объединить все пункты в один промпт для сохранения контекста задачи.
+
+
+### Почему такая модель
+
+Модель общего назначения. Результаты запросов подробнее, чем у аналогичной Gemini.
+
+
+### Результат ИИ
+
+См. документ _ЛР05-База данных.pdf_.
+
+
+### Проверка
+
+Создал SQLite БД в памяти, команды не делали ничего опасного и без проблем выполнялись в этой БД.
+
+
+### Собственная доработка
+
+DeepSeek предложил следующий вариант структуры ролей:
+
+```sql
+-- ---------- users ----------
+CREATE TABLE users (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL UNIQUE CHECK (email LIKE '%_@_%._%'),
+    full_name   TEXT NOT NULL,
+    department  TEXT,
+    is_active   INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0,1)),
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------- user_roles (M:N) ----------
+CREATE TABLE user_roles (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+```
+
+
+Так как это затрудняет глобальное изменение ролей, я решил использовать следующую схему:
+
+```sql
+-- ---------- users ----------
+CREATE TABLE users (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL UNIQUE CHECK (email LIKE '%_@_%._%'),
+    full_name   TEXT NOT NULL,
+    department  TEXT,
+    is_active   INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0,1)),
+    created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_role   INTEGER REFERENCES user_roles(id)
+);
+
+-- ---------- user_roles ----------
+CREATE TABLE user_roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
+```
+
+
+### Вывод
+
+Нейросеть очень удобно использовать в качестве помощника при проектировании и особенно для генерации тестовых данных по уже готовой схеме БД.

@@ -16,7 +16,8 @@ CREATE TABLE users (
     department  TEXT,
     is_active   INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0,1)),
     created_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    user_role   INTEGER REFERENCES user_roles(id)
+    user_role   INTEGER REFERENCES user_roles(id),
+    password_hash   TEXT
 );
 
 -- ---------- user_roles ----------

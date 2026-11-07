@@ -36,16 +36,15 @@ class ITicketRepository(ABC):
 
     @abstractmethod
     def search(
-            self,
-            q: str | None,
-            author_id: int | None,
-            assignee_id: int | None,
-            status_id: int | None,
-            date_from: datetime | None,
-            date_to: datetime | None,
-            limit: int,
-            offset: int,
+            self, q, author_id, assignee_id, status_id, category_id,
+            date_from, date_to, sort_by, sort_order, limit, offset,
     ) -> Sequence[Ticket]: ...
+
+    @abstractmethod
+    def count_search(
+            self, q, author_id, assignee_id, status_id, category_id,
+            date_from, date_to,
+    ) -> int: ...
 
 
 class ICommentRepository(ABC):

@@ -11,6 +11,8 @@ from app.repository.impl.orm_user import OrmUserRepository
 from app.repository.impl.orm_status import OrmStatusRepository
 from app.repository.impl.orm_history import OrmHistoryRepository
 from app.schemas import TicketCreateIn, TicketUpdateIn, TicketSearchIn
+from app.schemas import TicketSearchIn, TicketSearchPage, TicketListOut
+from app.exceptions import NotFoundError
 
 OPEN_STATUS_NAME = "open"
 OPERATOR_ROLE_NAMES = {"agent", "support_agent"}
@@ -325,3 +327,47 @@ class TicketService:
             changed_at=datetime.utcnow(),
             note=summary,
         ))
+
+    # ---------- search: operator ----------
+    def search(self, user: User, params: TicketSearchIn) -> TicketSearchPage:
+        role = _role_name(user)
+        if role not in INTERNAL_ROLES:
+            raise ForbiddenError("Поиск по каталогу доступен только поддержке")
+        return self._run_search(params)
+
+    # ---------- search: client (только свои) ----------
+    def search_own(self, user: User, params: TicketSearchIn) -> TicketSearchPage:
+        # принудительно ограничиваем author_id текущим пользователем
+        scoped = params.model_copy(update={"author_id": user.id})
+        return self._run_search(scoped)
+
+    # ---------- common ----------
+    def _run_search(self, params: TicketSearchIn) -> TicketSearchPage:
+        rows = self.tickets.search(
+            params.q, params.author_id, params.assignee_id, params.status_id,
+            params.category_id, params.date_from, params.date_to,
+            params.sort_by.value, params.sort_order.value,
+            params.limit, params.offset,
+        )
+        total = self.tickets.count_search(
+            params.q, params.author_id, params.assignee_id, params.status_id,
+            params.category_id, params.date_from, params.date_to,
+        )
+        items = [
+            TicketListOut(
+                id=t.id,
+                title=t.title,
+                status_id=t.status_id,
+                status_name=status_name,
+                category_id=t.category_id,
+                author_id=t.author_id,
+                assignee_id=t.assignee_id,
+                priority=t.priority,
+                created_at=t.created_at,
+                updated_at=t.updated_at,
+            )
+            for t, status_name in rows
+        ]
+        return TicketSearchPage(
+            total=total, limit=params.limit, offset=params.offset, items=items
+        )

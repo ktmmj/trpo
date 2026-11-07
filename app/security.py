@@ -1,10 +1,11 @@
-import hashlib
-import hmac
-import secrets
+import hashlib, hmac, secrets
 from datetime import datetime, timedelta
+from app.config import get_settings
 
-SECRET_KEY = "dev-secret-change-me"
-PBKDF2_ITERATIONS = 200_000
+settings = get_settings()
+SECRET_KEY = settings.secret_key
+PBKDF2_ITERATIONS = settings.pbkdf2_iterations
+TOKEN_TTL_HOURS = settings.token_ttl_hours
 
 
 def hash_password(password: str, salt: str | None = None) -> str:

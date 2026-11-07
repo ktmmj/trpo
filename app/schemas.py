@@ -74,19 +74,6 @@ class TicketStatusIn(BaseModel):
     note: str | None = Field(default=None, max_length=1000)
 
 
-class TicketListOut(BaseModel):
-    id: int
-    title: str
-    status_id: int
-    status_name: str
-    category_id: int | None
-    priority: str
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
 class TicketDetailOut(BaseModel):
     id: int
     title: str
@@ -126,12 +113,49 @@ class CommentOut(BaseModel):
 
 
 # ---------- Search ----------
+class SortField(str, Enum):
+    created_at = "created_at"
+    updated_at = "updated_at"
+    priority = "priority"
+    status = "status"
+
+
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+
 class TicketSearchIn(BaseModel):
     q: str | None = Field(default=None, max_length=255)  # тема/тело
     author_id: int | None = None
     assignee_id: int | None = None
     status_id: int | None = None
+    category_id: int | None = None
     date_from: datetime | None = None
     date_to: datetime | None = None
+    sort_by: SortField = SortField.created_at
+    sort_order: SortOrder = SortOrder.desc
     limit: int = Field(default=20, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
+
+
+class TicketListOut(BaseModel):
+    id: int
+    title: str
+    status_id: int
+    status_name: str
+    category_id: int | None
+    author_id: int
+    assignee_id: int | None
+    priority: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TicketSearchPage(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[TicketListOut]

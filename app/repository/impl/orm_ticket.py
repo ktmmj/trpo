@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import select, func, or_, and_
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 
 from app.models.entities import Ticket, Status
 from app.repository.interfaces import ITicketRepository
@@ -38,8 +38,29 @@ class OrmTicketRepository(ITicketRepository):
     def __init__(self, db: Session):
         self.db = db
 
-    # ... get_by_id, add, save, list_by_author — без изменений ...
+    # ---------- обязательные методы из ITicketRepository ----------
+    def get_by_id(self, ticket_id: int) -> Ticket | None:
+        return self.db.get(Ticket, ticket_id)
 
+    def add(self, ticket: Ticket) -> Ticket:
+        self.db.add(ticket)
+        self.db.flush()
+        return ticket
+
+    def save(self, ticket: Ticket) -> Ticket:
+        self.db.add(ticket)
+        self.db.flush()
+        return ticket
+
+    def list_by_author(self, author_id: int):
+        stmt = (
+            select(Ticket)
+            .where(Ticket.author_id == author_id)
+            .order_by(Ticket.created_at.desc())
+        )
+        return list(self.db.scalars(stmt))
+
+    # ---------- поиск ----------
     def _order_clause(self, sort_by: str, sort_order: str):
         col = {
             "created_at": Ticket.created_at,

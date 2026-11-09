@@ -10,14 +10,14 @@ from app.repository.impl.orm_ticket import OrmTicketRepository
 from app.repository.impl.orm_user import OrmUserRepository
 from app.repository.impl.orm_status import OrmStatusRepository
 from app.repository.impl.orm_history import OrmHistoryRepository
-from app.schemas import TicketCreateIn, TicketUpdateIn, TicketSearchIn
-from app.schemas import TicketSearchIn, TicketSearchPage, TicketListOut
+from app.schemas import TicketCreateIn, TicketUpdateIn, TicketSearchIn, ClientTicketCreateIn, TicketSearchPage, TicketListOut
 from app.exceptions import NotFoundError
 
 OPEN_STATUS_NAME = "open"
 OPERATOR_ROLE_NAMES = {"agent", "support_agent"}
 INTERNAL_ROLES = {"agent", "support_agent", "moderator", "admin"}
 ASSIGNABLE_ROLE_NAMES = {"agent", "support_agent"}
+CLIENT_ROLE_NAME = "employee"
 
 
 def _role_name(user: User) -> str | None:
@@ -371,3 +371,37 @@ class TicketService:
         return TicketSearchPage(
             total=total, limit=params.limit, offset=params.offset, items=items
         )
+
+    # ---------- create by client ----------
+    def create_by_client(self, actor: User, data: ClientTicketCreateIn) -> Ticket:
+        """
+        Создание заявки клиентом.
+        Доступно только активному пользователю с ролью 'employee'.
+        """
+        if _role_name(actor) != CLIENT_ROLE_NAME:
+            raise ForbiddenError(
+                "Создавать заявки через клиентский метод может только клиент"
+            )
+        if not actor.is_active:
+            raise ForbiddenError("Заблокированный пользователь не может создавать заявки")
+
+        open_status = self._get_status_by_name(OPEN_STATUS_NAME)
+        operator = self._pick_operator()  # может быть None
+
+        ticket = Ticket(
+            title=data.title,
+            description=data.description,
+            author_id=actor.id,
+            assignee_id=operator.id if operator else None,
+            category_id=None,  # категорию ставит оператор
+            status_id=open_status.id,
+            priority=data.priority.value,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        ticket = self.tickets.add(ticket)
+        self._log_status_change(ticket, open_status, actor, "Заявка создана клиентом")
+        self.db.commit()
+        self.db.refresh(ticket)
+        self._notify(ticket, "created")
+        return ticket

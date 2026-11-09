@@ -159,3 +159,22 @@ class TicketSearchPage(BaseModel):
     limit: int
     offset: int
     items: list[TicketListOut]
+
+
+class ClientTicketCreateIn(BaseModel):
+    """
+    Создание заявки клиентом.
+    Клиент задаёт только тему, тело и (опционально) приоритет.
+    category_id / assignee_id / status_id клиенту недоступны по ТЗ.
+    """
+    title: str = Field(min_length=3, max_length=255)
+    description: str | None = Field(default=None, max_length=10_000)
+    priority: Priority = Priority.normal
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Тема заявки не может быть пустой")
+        return v
